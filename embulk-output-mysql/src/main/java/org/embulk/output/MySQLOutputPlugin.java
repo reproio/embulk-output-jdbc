@@ -5,6 +5,7 @@ import java.util.Properties;
 import java.io.IOException;
 import java.sql.SQLException;
 import com.google.common.base.Optional;
+import com.mysql.jdbc.Connection;
 import org.embulk.config.Config;
 import org.embulk.config.ConfigDefault;
 import org.embulk.output.jdbc.AbstractJdbcOutputPlugin;
@@ -34,6 +35,47 @@ public class MySQLOutputPlugin
 
         @Config("database")
         public String getDatabase();
+
+        @Config("transaction_isolation_level")
+        @ConfigDefault("\"REPEATABLE_READ\"")
+        public TransactionIsolationLevel getTransactionIsolationLevel();
+    }
+
+    public enum TransactionIsolationLevel
+    {
+        READ_UNCOMMITTED("read_uncommitted") {
+            public int value()
+            {
+                return Connection.TRANSACTION_READ_UNCOMMITTED;
+            }
+        },
+        READ_COMMITTED("read_committed") {
+            public int value()
+            {
+                return Connection.TRANSACTION_READ_COMMITTED;
+            }
+        },
+        REPEATABLE_READ("repeatable_read") {
+            public int value()
+            {
+                return Connection.TRANSACTION_REPEATABLE_READ;
+            }
+        },
+        SERIALIZABLE("serializable") {
+            public int value()
+            {
+                return Connection.TRANSACTION_SERIALIZABLE;
+            }
+        };
+
+        private final String name;
+
+        TransactionIsolationLevel(String name)
+        {
+            this.name = name;
+        }
+
+        abstract public int value();
     }
 
     @Override
@@ -100,7 +142,7 @@ public class MySQLOutputPlugin
         logger.info("Connecting to {} options {}", url, props);
         props.setProperty("password", t.getPassword());
 
-        return new MySQLOutputConnector(url, props);
+        return new MySQLOutputConnector(url, props, t.getTransactionIsolationLevel());
     }
 
     @Override
