@@ -945,8 +945,17 @@ public abstract class AbstractJdbcOutputPlugin
         public void finish()
         {
             try {
-                batch.finish();
-            } catch (IOException | SQLException ex) {
+                executor.retryableStmtExecute(new RetryableSQLExecution() {
+                    @Override
+                    public void run() throws SQLException {
+                        try {
+                            batch.finish();
+                        } catch (IOException ex) {
+                            throw new RuntimeException(ex);
+                        }
+                    }
+                });
+            } catch (SQLException ex) {
                 throw new RuntimeException(ex);
             }
         }
